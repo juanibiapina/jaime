@@ -4,7 +4,7 @@ set -e
 
 command="$1"
 
-fetch_repos() {
+refresh_repos() {
   rm -f $JAIME_CACHE_DIR/github-repos.txt
 
   declare -i page
@@ -34,14 +34,34 @@ print_repos() {
   fi
 }
 
+print_preview() {
+  local command="$1"
+
+  if [[ "$command" = "refresh" ]]; then
+    echo "Refresh local repository cache"
+  else
+    echo "Open this repository"
+  fi
+}
+
 if [ -z "$command" ]; then
-  echo "fetch"
+  echo "refresh"
   print_repos
   exit
 fi
 
-if [[ "$command" = "fetch" ]]; then
-  fetch_repos
+if [[ "$command" = "--preview" ]]; then
+  shift
+  if [ -z "$1" ]; then
+    echo "Open github repository in the browser"
+  else
+    print_preview "$1"
+  fi
+  exit
+fi
+
+if [[ "$command" = "refresh" ]]; then
+  refresh_repos
   exit
 fi
 

@@ -8,6 +8,11 @@ if [ -z "$command" ]; then
   exit
 fi
 
+if [[ "$command" = "--preview" ]]; then
+  echo "Start screensaver"
+  exit
+fi
+
 if [[ "$command" = "run" ]]; then
   open -a ScreenSaverEngine
 fi
