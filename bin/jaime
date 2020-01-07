@@ -2,40 +2,29 @@
 
 set -e
 
-resolve_link() {
-  $(type -p greadlink readlink | head -1) "$1"
-}
-
-abs_dirname() {
-  local cwd="$(pwd)"
-  local path="$1"
-
-  while [ -n "$path" ]; do
-    cd "${path%/*}"
-    local name="${path##*/}"
-    path="$(resolve_link "$name" || true)"
-  done
-
-  pwd
-  cd "$cwd"
-}
-
+# Prepare cache directory for plugins
 export JAIME_CACHE_DIR=${XDG_DATA_HOME:-$HOME/.local/share/jaime/cache}
 mkdir -p $JAIME_CACHE_DIR
 
-bin_path="$(abs_dirname "$0")"
+# List commands and filter through fzf
+IFS=: paths=($PATH)
+
+shopt -s nullglob
 
 command="$({
-  for plugin in "${bin_path}/jaime-"*; do
-    echo "${plugin##*jaime-}"
+  for path in "${paths[@]}"; do
+    for plugin in "${path}/jaime-"*; do
+      echo "${plugin##*jaime-}"
+    done
   done
-} | fzf --bind=space:accept)"
+}| sort | uniq | fzf --bind=space:accept)"
 
-output=$("${bin_path}/jaime-${command}")
+# Run command
+output=$("jaime-${command}")
 
 if [ -z "$output" ]; then
-  "${bin_path}/jaime-${command}" run
+  "jaime-${command}" run
 else
-  echo "$output" | fzf --bind=space:accept | xargs "${bin_path}/jaime-${command}"
+  echo "$output" | fzf --bind=space:accept | xargs "jaime-${command}"
 fi
 
