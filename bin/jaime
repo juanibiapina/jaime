@@ -28,4 +28,11 @@ commands_path="${bin_path}/../commands"
 
 command="$(ls $commands_path | fzf --bind=space:accept)"
 
-"${commands_path}/${command}" | fzf --bind=space:accept | xargs "${commands_path}/${command}"
+output=$("${commands_path}/${command}")
+
+if [ -z "$output" ]; then
+  "${commands_path}/${command}" run
+else
+  echo "$output" | fzf --bind=space:accept | xargs "${commands_path}/${command}"
+fi
+
