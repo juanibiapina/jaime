@@ -20,6 +20,9 @@ abs_dirname() {
   cd "$cwd"
 }
 
+export JAIME_CACHE_DIR=${XDG_DATA_HOME:-$HOME/.local/share/jaime/cache}
+mkdir -p $JAIME_CACHE_DIR
+
 bin_path="$(abs_dirname "$0")"
 commands_path="${bin_path}/../commands"
 

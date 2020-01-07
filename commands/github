@@ -2,18 +2,49 @@
 
 set -e
 
-repo="$1"
+command="$1"
 
-print_repos() {
-  echo "juanibiapina/dev"
-  echo "juanibiapina/zas"
+fetch_repos() {
+  rm -f $JAIME_CACHE_DIR/github-repos.txt
+
+  declare -i page
+  local page=1
+
+  for (( ; ; )); do
+    repos=($(curl -u $GITHUB_USER:$GITHUB_TOKEN -s "https://api.github.com/user/repos?per_page=100&page=$page" | jq -r "map(.full_name) | .[]"))
+
+    # Stop if page is empty
+    if [ ${#repos[@]} -eq 0 ]; then
+      break
+    fi
+
+    # Print repo name
+    for repo in "${repos[@]}"; do
+      echo $repo >> $JAIME_CACHE_DIR/github-repos.txt
+    done
+
+    # Go to next page
+    ((page+=1))
+  done
 }
 
-if [ -z "$repo" ]; then
+print_repos() {
+  if [ -a $JAIME_CACHE_DIR/github-repos.txt ]; then
+    cat $JAIME_CACHE_DIR/github-repos.txt
+  fi
+}
+
+if [ -z "$command" ]; then
+  echo "fetch"
   print_repos
   exit
 fi
 
-repo_url="https://github.com/${repo}"
+if [[ "$command" = "fetch" ]]; then
+  fetch_repos
+  exit
+fi
+
+repo_url="https://github.com/${command}"
 
 open "${repo_url}"
