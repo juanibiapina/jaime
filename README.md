@@ -22,7 +22,7 @@ Source `shell/key-bindings.zsh` in order to bind `ctrl+space` to the Jaime widge
 
 ### Tmux
 
-Add this to your tmux.conf to make <prefix>Space open the Jaime launcher in a split window.
+Add this to your tmux.conf to make `<prefix>-Space` open the Jaime launcher in a split window.
 
 ```
 # Run Jaime
