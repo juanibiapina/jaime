@@ -8,7 +8,7 @@ if [ -z "$command" ]; then
   exit
 fi
 
-if [[ "$command" = "--preview" ]]; then
+if [[ "$command" = "preview" ]]; then
   echo "Start screensaver"
   exit
 fi

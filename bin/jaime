@@ -17,7 +17,7 @@ command="$({
       echo "${plugin##*jaime-}"
     done
   done
-}| sort | uniq | fzf --bind=space:accept --preview='jaime-{} --preview')"
+}| sort | uniq | fzf --bind=space:accept --preview='jaime-{} preview')"
 
 # Run command
 output=$("jaime-${command}")
@@ -25,5 +25,5 @@ output=$("jaime-${command}")
 if [ -z "$output" ]; then
   "jaime-${command}" run
 else
-  echo "$output" | fzf --bind=space:accept --preview="jaime-${command} --preview {}" | xargs "jaime-${command}"
+  echo "$output" | fzf --bind=space:accept --preview="jaime-${command} preview {}" | xargs "jaime-${command}" run
 fi

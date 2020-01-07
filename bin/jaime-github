@@ -50,7 +50,7 @@ if [ -z "$command" ]; then
   exit
 fi
 
-if [[ "$command" = "--preview" ]]; then
+if [[ "$command" = "preview" ]]; then
   shift
   if [ -z "$1" ]; then
     echo "Open github repository in the browser"
@@ -60,11 +60,16 @@ if [[ "$command" = "--preview" ]]; then
   exit
 fi
 
-if [[ "$command" = "refresh" ]]; then
-  refresh_repos
-  exit
+if [[ "$command" = "run" ]]; then
+  shift
+  arg="$1"
+
+  if [[ "$arg" = "refresh" ]]; then
+    refresh_repos
+    exit
+  fi
+
+  repo_url="https://github.com/${arg}"
+
+  open "${repo_url}"
 fi
-
-repo_url="https://github.com/${command}"
-
-open "${repo_url}"
