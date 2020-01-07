@@ -24,15 +24,15 @@ export JAIME_CACHE_DIR=${XDG_DATA_HOME:-$HOME/.local/share/jaime/cache}
 mkdir -p $JAIME_CACHE_DIR
 
 bin_path="$(abs_dirname "$0")"
-commands_path="${bin_path}/../commands"
+plugins_path="${bin_path}/../plugins"
 
-command="$(ls $commands_path | fzf --bind=space:accept)"
+command="$(ls $plugins_path | fzf --bind=space:accept)"
 
-output=$("${commands_path}/${command}")
+output=$("${plugins_path}/${command}")
 
 if [ -z "$output" ]; then
-  "${commands_path}/${command}" run
+  "${plugins_path}/${command}" run
 else
-  echo "$output" | fzf --bind=space:accept | xargs "${commands_path}/${command}"
+  echo "$output" | fzf --bind=space:accept | xargs "${plugins_path}/${command}"
 fi
 
