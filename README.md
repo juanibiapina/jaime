@@ -2,6 +2,10 @@
 
 A command line launcher inspired by Alfred.
 
+## Install
+
+Clone this repository and add the `bin` directory to your `PATH`.
+
 ## Usage
 
 ### From zsh
