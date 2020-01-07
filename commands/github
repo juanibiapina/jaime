@@ -1,3 +1,19 @@
 #!/usr/bin/env bash
 
 set -e
+
+repo="$1"
+
+print_repos() {
+  echo "juanibiapina/dev"
+  echo "juanibiapina/zas"
+}
+
+if [ -z "$repo" ]; then
+  print_repos
+  exit
+fi
+
+repo_url="https://github.com/${repo}"
+
+open "${repo_url}"

@@ -25,4 +25,4 @@ commands_path="${bin_path}/../commands"
 
 command="$(ls $commands_path | fzf --bind=space:accept)"
 
-echo $command
+"${commands_path}/${command}" | fzf --bind=space:accept | xargs "${commands_path}/${command}"
