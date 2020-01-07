@@ -20,10 +20,18 @@ command="$({
 }| sort | uniq | fzf --bind=space:accept --preview='jaime-{} preview')"
 
 # Run command
-output=$("jaime-${command}")
+cmd="jaime-${command}"
+output=$(${cmd})
+chain=()
 
-if [ -z "$output" ]; then
-  "jaime-${command}" run
-else
-  echo "$output" | fzf --bind=space:accept --preview="jaime-${command} preview {}" | xargs "jaime-${command}" run
-fi
+for (( ; ; )); do
+  if [ -z "$output" ]; then
+    "${cmd}" run "${chain[@]}"
+    break
+  else
+    preview="${cmd} preview ${chain[@]} {}"
+    argument=$(echo "$output" | fzf --bind=space:accept --preview="$preview")
+    chain+=("$argument")
+    output=$("${cmd}" "${chain[@]}")
+  fi
+done
