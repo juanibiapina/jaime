@@ -17,7 +17,7 @@ command="$({
       echo "${plugin##*jaime-}"
     done
   done
-}| sort | uniq | fzf --bind=space:accept --preview='jaime-{} preview')"
+}| sort | uniq | fzf --preview='jaime-{} preview')"
 
 # Run command
 cmd="jaime-${command}"
@@ -30,7 +30,7 @@ for (( ; ; )); do
     break
   else
     preview="${cmd} preview ${chain[@]} {}"
-    argument=$(echo "$output" | fzf --bind=space:accept --preview="$preview")
+    argument=$(echo "$output" | fzf --preview="$preview")
     chain+=("$argument")
     output=$("${cmd}" "${chain[@]}")
   fi
