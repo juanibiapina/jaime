@@ -6,12 +6,22 @@ extern crate skim;
 use skim::{Skim, SkimOptionsBuilder};
 use serde::{Serialize, Deserialize};
 
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::fs::File;
+use std::process::Command;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
-    commands: Vec<String>,
+    widgets: HashMap<String, Widget>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+enum Widget {
+    Command {
+        command: String,
+    },
 }
 
 fn main() {
@@ -28,13 +38,24 @@ fn main() {
         .build()
         .unwrap();
 
-    let input = config.commands.join("\n");
+    let input = config.widgets.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
 
     let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
         .map(|out| out.selected_items)
         .unwrap_or_else(|| Vec::new());
 
-    for item in selected_items.iter() {
-        println!("{}", item.get_output_text());
+    let selected = selected_items.iter().next().unwrap();
+    let selected_command: String = selected.get_output_text().to_string();
+
+    let widget = config.widgets.get(&selected_command).unwrap();
+
+    match widget {
+        Widget::Command { command } => {
+            Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .status()
+                .unwrap();
+            },
     }
 }
