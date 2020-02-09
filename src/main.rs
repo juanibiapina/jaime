@@ -32,7 +32,7 @@ enum Widget {
     },
     DynamicSelect {
         arguments: Vec<String>,
-        template: String,
+        command: String,
     },
 }
 
@@ -83,7 +83,7 @@ fn run_widget(context: &Context, widget: &Widget) {
 
             run_widget(context, widget);
         },
-        Widget::DynamicSelect { arguments, template } => {
+        Widget::DynamicSelect { arguments, command } => {
             let mut args: Vec<String> = Vec::new();
 
             for (index, argument) in arguments.iter().enumerate() {
@@ -98,7 +98,7 @@ fn run_widget(context: &Context, widget: &Widget) {
                 args.push(display_selector(output));
             }
 
-            let mut cmd = template.clone();
+            let mut cmd = command.clone();
 
             for (index, arg) in args.iter().enumerate() {
                 cmd = cmd.replace(&format!("{{{}}}", index), arg);
