@@ -25,6 +25,10 @@ enum Widget {
     Select {
         options: HashMap<String, Widget>,
     },
+    DynamicSelect {
+        arguments: String,
+        template: String,
+    },
 }
 
 fn display_selector(input: String) -> String {
@@ -43,6 +47,16 @@ fn display_selector(input: String) -> String {
     selected.get_output_text().to_string()
 }
 
+fn run_shell(cmd: &str) -> String {
+    std::str::from_utf8(Command::new("sh")
+        .arg("-c")
+        .arg(cmd)
+        .output()
+        .unwrap()
+        .stdout
+        .as_slice()).unwrap().to_owned()
+}
+
 fn run_widget(widget: &Widget) {
     match widget {
         Widget::Command { command } => {
@@ -59,6 +73,18 @@ fn run_widget(widget: &Widget) {
             let widget = options.get(&selected_command).unwrap();
 
             run_widget(widget);
+        },
+        Widget::DynamicSelect { arguments, template } => {
+            let input = run_shell(arguments);
+            let arg = display_selector(input);
+
+            let cmd = template.replace("{}", &arg);
+
+            Command::new("sh")
+                .arg("-c")
+                .arg(cmd)
+                .status()
+                .unwrap();
         },
     }
 }
