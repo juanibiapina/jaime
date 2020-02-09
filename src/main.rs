@@ -1,12 +1,13 @@
 extern crate xdg;
 extern crate serde;
 extern crate serde_yaml;
+extern crate skim;
 
+use skim::{Skim, SkimOptionsBuilder};
 use serde::{Serialize, Deserialize};
 
-use std::io::Write;
+use std::io::Cursor;
 use std::fs::File;
-use std::process::{Command, Stdio};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -21,22 +22,19 @@ fn main() {
 
     let config: Config = serde_yaml::from_reader(file).unwrap();
 
-    let mut fzf_cmd = Command::new("sh")
-        .arg("-c")
-        .arg("fzf")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to start fzf");
+    let options = SkimOptionsBuilder::default()
+        .height(Some("50%"))
+        .multi(false)
+        .build()
+        .unwrap();
 
-    {
-        let stdin = fzf_cmd.stdin.as_mut().expect("failed to open stdin to fzf");
-        for command in config.commands.iter() {
-            stdin.write_all(command.as_bytes()).expect("failed to write to stdin");
-            stdin.write_all("\n".as_bytes()).expect("failed to write to stdin");
-        }
+    let input = config.commands.join("\n");
+
+    let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
+        .map(|out| out.selected_items)
+        .unwrap_or_else(|| Vec::new());
+
+    for item in selected_items.iter() {
+        println!("{}", item.get_output_text());
     }
-
-    let output = fzf_cmd.wait_with_output().expect("failed to read stdout from fzf");
-    println!("{}", String::from_utf8_lossy(&output.stdout));
 }

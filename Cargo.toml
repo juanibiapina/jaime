@@ -10,3 +10,4 @@ edition = "2018"
 xdg = "*"
 serde = { version = "*", features = ["derive"] }
 serde_yaml = "*"
+skim = "*"
