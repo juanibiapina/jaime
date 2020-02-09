@@ -32,14 +32,16 @@ enum Widget {
     },
     DynamicSelect {
         arguments: Vec<String>,
+        preview: Option<String>,
         command: String,
     },
 }
 
-fn display_selector(input: String) -> String {
+fn display_selector(input: String, preview: Option<&str>) -> String {
     let options = SkimOptionsBuilder::default()
         .multi(false)
         .ansi(true)
+        .preview(preview)
         .build()
         .unwrap();
 
@@ -77,13 +79,13 @@ fn run_widget(context: &Context, widget: &Widget) {
         Widget::Command { command } => run_shell(context, command),
         Widget::Select { options } => {
             let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
-            let selected_command = display_selector(input);
+            let selected_command = display_selector(input, None);
 
             let widget = options.get(&selected_command).unwrap();
 
             run_widget(context, widget);
         },
-        Widget::DynamicSelect { arguments, command } => {
+        Widget::DynamicSelect { arguments, command, preview } => {
             let mut args: Vec<String> = Vec::new();
 
             for (index, argument) in arguments.iter().enumerate() {
@@ -95,7 +97,7 @@ fn run_widget(context: &Context, widget: &Widget) {
 
                 let output = run_shell_command_for_output(context, &result).to_owned();
 
-                args.push(display_selector(output));
+                args.push(display_selector(output, preview.as_ref().map(|s| s.as_ref())));
             }
 
             let mut cmd = command.clone();
@@ -119,7 +121,7 @@ fn main() {
 
     let input = config.widgets.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
 
-    let selected_command = display_selector(input);
+    let selected_command = display_selector(input, None);
 
     let widget = config.widgets.get(&selected_command).unwrap();
 
