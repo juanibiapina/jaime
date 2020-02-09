@@ -2,6 +2,8 @@
 
 A command line launcher inspired by Alfred.
 
+![Usage](assets/usage.gif)
+
 ## Install
 
 Clone this repository and install locally with:
