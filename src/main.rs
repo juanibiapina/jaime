@@ -6,10 +6,15 @@ extern crate skim;
 use skim::{Skim, SkimOptionsBuilder};
 use serde::{Serialize, Deserialize};
 
+use std::path::PathBuf;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::fs::File;
 use std::process::Command;
+
+struct Context {
+    cache_directory: PathBuf,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -48,32 +53,36 @@ fn display_selector(input: String) -> String {
     selected.get_output_text().to_string()
 }
 
-fn run_shell(cmd: &str) -> String {
+fn run_shell(context: &Context, cmd: &str) {
+    Command::new("sh")
+        .arg("-c")
+        .arg(cmd)
+        .env("JAIME_CACHE_DIR", &context.cache_directory)
+        .status()
+        .unwrap();
+}
+
+fn run_shell_command_for_output(context: &Context, cmd: &str) -> String {
     std::str::from_utf8(Command::new("sh")
         .arg("-c")
         .arg(cmd)
+        .env("JAIME_CACHE_DIR", &context.cache_directory)
         .output()
         .unwrap()
         .stdout
         .as_slice()).unwrap().to_owned()
 }
 
-fn run_widget(widget: &Widget) {
+fn run_widget(context: &Context, widget: &Widget) {
     match widget {
-        Widget::Command { command } => {
-            Command::new("sh")
-                .arg("-c")
-                .arg(command)
-                .status()
-                .unwrap();
-        },
+        Widget::Command { command } => run_shell(context, command),
         Widget::Select { options } => {
             let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
             let selected_command = display_selector(input);
 
             let widget = options.get(&selected_command).unwrap();
 
-            run_widget(widget);
+            run_widget(context, widget);
         },
         Widget::DynamicSelect { arguments, template } => {
             let mut args: Vec<String> = Vec::new();
@@ -85,7 +94,7 @@ fn run_widget(widget: &Widget) {
                     result = result.replace(&format!("{{{}}}", i), &args[i]);
                 }
 
-                let output = run_shell(&result).to_owned();
+                let output = run_shell_command_for_output(context, &result).to_owned();
 
                 args.push(display_selector(output));
             }
@@ -96,11 +105,7 @@ fn run_widget(widget: &Widget) {
                 cmd = cmd.replace(&format!("{{{}}}", index), arg);
             }
 
-            Command::new("sh")
-                .arg("-c")
-                .arg(cmd)
-                .status()
-                .unwrap();
+            run_shell(context, &cmd);
         },
     }
 }
@@ -119,5 +124,9 @@ fn main() {
 
     let widget = config.widgets.get(&selected_command).unwrap();
 
-    run_widget(widget);
+    let context = Context {
+        cache_directory: xdg_dirs.create_cache_directory("cache").unwrap(),
+    };
+
+    run_widget(&context, widget);
 }
