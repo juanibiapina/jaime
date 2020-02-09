@@ -12,6 +12,9 @@ cargo install --path .
 
 ## Configuration
 
+Configuration file that I use:
+https://github.com/juanibiapina/dotfiles/blob/master/jaime/config.yml
+
 Jaime looks for a config file in the XDG Config directory (usually
 ~/.config/jaime/config.yml). The configuration specifies which widgets will be
 available. For instance, two simple widgets:
