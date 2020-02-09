@@ -2,13 +2,13 @@
 
 A command line launcher inspired by Alfred.
 
-## Dependencies
-
-- [fzf](https://github.com/junegunn/fzf)
-
 ## Install
 
-Clone this repository and add the `bin` directory to your `PATH`.
+Clone this repository and install locally with:
+
+```
+cargo install --path .
+```
 
 ## Usage
 
