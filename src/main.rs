@@ -112,7 +112,7 @@ fn run_widget(context: &Context, widget: &Widget) {
 
 fn main() {
     let xdg_dirs = xdg::BaseDirectories::with_prefix("jaime").unwrap();
-    let config_path = xdg_dirs.place_config_file("config.yaml").expect("cannot create config directory");
+    let config_path = xdg_dirs.place_config_file("config.yml").expect("cannot create config directory");
 
     let file = File::open(config_path).expect("cannot open config file");
 
