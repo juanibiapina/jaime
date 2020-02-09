@@ -38,7 +38,6 @@ enum Widget {
 
 fn display_selector(input: String) -> String {
     let options = SkimOptionsBuilder::default()
-        .height(Some("50%"))
         .multi(false)
         .ansi(true)
         .build()
