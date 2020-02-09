@@ -26,7 +26,7 @@ enum Widget {
         options: HashMap<String, Widget>,
     },
     DynamicSelect {
-        arguments: String,
+        arguments: Vec<String>,
         template: String,
     },
 }
@@ -75,10 +75,25 @@ fn run_widget(widget: &Widget) {
             run_widget(widget);
         },
         Widget::DynamicSelect { arguments, template } => {
-            let input = run_shell(arguments);
-            let arg = display_selector(input);
+            let mut args: Vec<String> = Vec::new();
 
-            let cmd = template.replace("{}", &arg);
+            for (index, argument) in arguments.iter().enumerate() {
+                let mut result = argument.clone();
+
+                for i in 0..index {
+                    result = result.replace(&format!("{{{}}}", i), &args[i]);
+                }
+
+                let output = run_shell(&result).to_owned();
+
+                args.push(display_selector(output));
+            }
+
+            let mut cmd = template.clone();
+
+            for (index, arg) in args.iter().enumerate() {
+                cmd = cmd.replace(&format!("{{{}}}", index), arg);
+            }
 
             Command::new("sh")
                 .arg("-c")
