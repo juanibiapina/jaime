@@ -22,6 +22,45 @@ enum Widget {
     Command {
         command: String,
     },
+    Select {
+        options: HashMap<String, Widget>,
+    },
+}
+
+fn display_selector(input: String) -> String {
+    let options = SkimOptionsBuilder::default()
+        .height(Some("50%"))
+        .multi(false)
+        .build()
+        .unwrap();
+
+    let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
+        .map(|out| out.selected_items)
+        .unwrap_or_else(|| Vec::new());
+
+    let selected = selected_items.iter().next().unwrap();
+
+    selected.get_output_text().to_string()
+}
+
+fn run_widget(widget: &Widget) {
+    match widget {
+        Widget::Command { command } => {
+            Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .status()
+                .unwrap();
+        },
+        Widget::Select { options } => {
+            let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
+            let selected_command = display_selector(input);
+
+            let widget = options.get(&selected_command).unwrap();
+
+            run_widget(widget);
+        },
+    }
 }
 
 fn main() {
@@ -32,30 +71,11 @@ fn main() {
 
     let config: Config = serde_yaml::from_reader(file).unwrap();
 
-    let options = SkimOptionsBuilder::default()
-        .height(Some("50%"))
-        .multi(false)
-        .build()
-        .unwrap();
-
     let input = config.widgets.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
 
-    let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
-        .map(|out| out.selected_items)
-        .unwrap_or_else(|| Vec::new());
-
-    let selected = selected_items.iter().next().unwrap();
-    let selected_command: String = selected.get_output_text().to_string();
+    let selected_command = display_selector(input);
 
     let widget = config.widgets.get(&selected_command).unwrap();
 
-    match widget {
-        Widget::Command { command } => {
-            Command::new("sh")
-                .arg("-c")
-                .arg(command)
-                .status()
-                .unwrap();
-            },
-    }
+    run_widget(widget);
 }
