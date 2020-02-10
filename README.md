@@ -103,6 +103,22 @@ The `preview` command uses the placeholder syntax from
 command is currently being viewed. In practice that means it can only work well
 when the list of argument commands has only one entry.
 
+#### FreeText
+
+Takes text input from the user and passes it as argument to a command. The text
+is not quoted when passed to the command.
+
+```
+widgets:
+  duck:
+    type: FreeText
+    command: open "https://duckduckgo.com/?q={}"
+```
+
+Attributes:
+
+- `command`: command to execute
+
 ## Usage
 
 Run `jaime` to launch a fuzzy search window and select commands.

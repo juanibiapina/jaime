@@ -1,3 +1,4 @@
+extern crate rustyline;
 extern crate xdg;
 extern crate serde;
 extern crate serde_yaml;
@@ -5,6 +6,8 @@ extern crate skim;
 
 use skim::{Skim, SkimOptionsBuilder};
 use serde::{Serialize, Deserialize};
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 use std::path::PathBuf;
 use std::collections::HashMap;
@@ -33,6 +36,9 @@ enum Widget {
     DynamicSelect {
         arguments: Vec<String>,
         preview: Option<String>,
+        command: String,
+    },
+    FreeText {
         command: String,
     },
 }
@@ -107,6 +113,26 @@ fn run_widget(context: &Context, widget: &Widget) {
             }
 
             run_shell(context, &cmd);
+        },
+        Widget::FreeText { command } => {
+            let mut rl = Editor::<()>::new();
+
+            let readline = rl.readline("> ");
+            match readline {
+                Ok(line) => {
+                    let cmd = command.replace("{}", &line);
+                    run_shell(context, &cmd);
+                },
+                Err(ReadlineError::Interrupted) => {
+                    println!("CTRL-C");
+                },
+                Err(ReadlineError::Eof) => {
+                    println!("CTRL-D");
+                },
+                Err(err) => {
+                    println!("Error: {:?}", err);
+                }
+            }
         },
     }
 }
