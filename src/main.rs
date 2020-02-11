@@ -1,9 +1,11 @@
+#[macro_use] extern crate failure;
 extern crate rustyline;
 extern crate xdg;
 extern crate serde;
 extern crate serde_yaml;
 extern crate skim;
 
+use failure::{Error, ResultExt};
 use skim::{Skim, SkimOptionsBuilder};
 use serde::{Serialize, Deserialize};
 use rustyline::error::ReadlineError;
@@ -43,53 +45,59 @@ enum Widget {
     },
 }
 
-fn display_selector(input: String, preview: Option<&str>) -> String {
+fn display_selector(input: String, preview: Option<&str>) -> Result<Option<String>, Error> {
     let options = SkimOptionsBuilder::default()
         .multi(false)
         .ansi(true)
         .preview(preview)
         .build()
-        .unwrap();
+        .map_err(|err| format_err!("{}", err))?;
 
     let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
         .map(|out| out.selected_items)
         .unwrap_or_else(|| Vec::new());
 
-    let selected = selected_items.iter().next().unwrap();
-
-    selected.get_output_text().to_string()
+    Ok(selected_items
+        .iter()
+        .next()
+        .map(|selected| selected.get_output_text().to_string()))
 }
 
-fn run_shell(context: &Context, cmd: &str) {
+fn run_shell(context: &Context, cmd: &str) -> Result<(), Error> {
     Command::new("sh")
         .arg("-c")
         .arg(cmd)
         .env("JAIME_CACHE_DIR", &context.cache_directory)
-        .status()
-        .unwrap();
+        .status()?;
+
+    Ok(())
 }
 
-fn run_shell_command_for_output(context: &Context, cmd: &str) -> String {
-    std::str::from_utf8(Command::new("sh")
+fn run_shell_command_for_output(context: &Context, cmd: &str) -> Result<String, Error> {
+    Ok(std::str::from_utf8(Command::new("sh")
         .arg("-c")
         .arg(cmd)
         .env("JAIME_CACHE_DIR", &context.cache_directory)
-        .output()
-        .unwrap()
+        .output()?
         .stdout
-        .as_slice()).unwrap().to_owned()
+        .as_slice())?.to_owned())
 }
 
-fn run_widget(context: &Context, widget: &Widget) {
+fn run_widget(context: &Context, widget: &Widget) -> Result<(), Error> {
     match widget {
         Widget::Command { command } => run_shell(context, command),
         Widget::Select { options } => {
             let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
-            let selected_command = display_selector(input, None);
+            let selected_command = display_selector(input, None)?;
 
-            let widget = options.get(&selected_command).unwrap();
-
-            run_widget(context, widget);
+            if let Some(selected_command) = selected_command {
+                match options.get(&selected_command) {
+                    Some(widget) => { run_widget(context, widget) },
+                    None => { Ok(()) },
+                }
+            } else {
+                Ok(())
+            }
         },
         Widget::DynamicSelect { arguments, command, preview } => {
             let mut args: Vec<String> = Vec::new();
@@ -101,9 +109,15 @@ fn run_widget(context: &Context, widget: &Widget) {
                     result = result.replace(&format!("{{{}}}", i), &args[i]);
                 }
 
-                let output = run_shell_command_for_output(context, &result).to_owned();
+                let output = run_shell_command_for_output(context, &result)?;
 
-                args.push(display_selector(output, preview.as_ref().map(|s| s.as_ref())));
+                let selected_command = display_selector(output, preview.as_ref().map(|s| s.as_ref()))?;
+
+                if let Some(selected_command) = selected_command {
+                    args.push(selected_command);
+                } else {
+                    return Ok(());
+                }
             }
 
             let mut cmd = command.clone();
@@ -112,48 +126,59 @@ fn run_widget(context: &Context, widget: &Widget) {
                 cmd = cmd.replace(&format!("{{{}}}", index), arg);
             }
 
-            run_shell(context, &cmd);
+            run_shell(context, &cmd)
         },
         Widget::FreeText { command } => {
             let mut rl = Editor::<()>::new();
 
-            let readline = rl.readline("> ");
-            match readline {
+            let line = rl.readline("> ");
+            match line {
                 Ok(line) => {
                     let cmd = command.replace("{}", &line);
-                    run_shell(context, &cmd);
+                    run_shell(context, &cmd)
                 },
                 Err(ReadlineError::Interrupted) => {
-                    println!("CTRL-C");
+                    Ok(())
                 },
                 Err(ReadlineError::Eof) => {
-                    println!("CTRL-D");
+                    Ok(())
                 },
                 Err(err) => {
-                    println!("Error: {:?}", err);
+                    Err(err)?
                 }
             }
         },
     }
 }
 
-fn main() {
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("jaime").unwrap();
-    let config_path = xdg_dirs.place_config_file("config.yml").expect("cannot create config directory");
+fn actual_main() -> Result<(), Error> {
+    let xdg_dirs = xdg::BaseDirectories::with_prefix("jaime")?;
+    let config_path = xdg_dirs.place_config_file("config.yml")?;
 
-    let file = File::open(config_path).expect("cannot open config file");
+    let file = File::open(config_path).context("Couldn't read config file")?;
 
-    let config: Config = serde_yaml::from_reader(file).unwrap();
+    let config: Config = serde_yaml::from_reader(file)?;
 
     let input = config.widgets.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
 
-    let selected_command = display_selector(input, None);
+    let selected_command = display_selector(input, None)?;
 
-    let widget = config.widgets.get(&selected_command).unwrap();
+    if let Some(selected_command) = selected_command {
+        let widget = config.widgets.get(&selected_command).unwrap();
 
-    let context = Context {
-        cache_directory: xdg_dirs.create_cache_directory("cache").unwrap(),
-    };
+        let context = Context {
+            cache_directory: xdg_dirs.create_cache_directory("cache")?,
+        };
 
-    run_widget(&context, widget);
+        run_widget(&context, widget)?;
+    }
+
+    Ok(())
+}
+
+fn main() {
+    match actual_main() {
+        Ok(()) => {},
+        Err(err) => println!("{}", err),
+    }
 }
