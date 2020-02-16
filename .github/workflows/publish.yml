@@ -1,0 +1,73 @@
+name: Rust
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Create Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -fsSL https://github.com/github/hub/raw/master/script/get | bash -s 2.14.1
+        bin/hub release create -m ${GITHUB_REF#refs/tags/} ${GITHUB_REF#refs/tags/}
+  publish_linux:
+    name: Publish Linux Artifact
+    runs-on: ubuntu-latest
+    needs: create_release
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install rust stable
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+          override: true
+    - name: Install cross
+      run: cargo install cross
+    - name: Create Artifact
+      run: |
+        cross build --target x86_64-unknown-linux-gnu --release
+        mkdir dist
+        cp target/x86_64-unknown-linux-gnu/release/jaime dist/
+        cd dist
+        tar czf jaime-${GITHUB_REF#refs/tags/}-x86_64-unknown-linux-gnu.tar.gz *
+        cd ..
+    - name: Create Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -fsSL https://github.com/github/hub/raw/master/script/get | bash -s 2.14.1
+        bin/hub release edit -a "dist/jaime-${GITHUB_REF#refs/tags/}-x86_64-unknown-linux-gnu.tar.gz" -m ${GITHUB_REF#refs/tags/} ${GITHUB_REF#refs/tags/}
+  publish_osx:
+    name: Publish OSX Artifact
+    runs-on: macos-latest
+    needs: create_release
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install rust stable
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+          override: true
+    - name: Install cross
+      run: cargo install cross
+    - name: Create Artifact
+      run: |
+        cross build --target x86_64-apple-darwin --release
+        mkdir dist
+        cp target/x86_64-apple-darwin/release/jaime dist/
+        cd dist
+        tar czf jaime-${GITHUB_REF#refs/tags/}-x86_64-apple-darwin.tar.gz *
+        cd ..
+    - name: Create Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -fsSL https://github.com/github/hub/raw/master/script/get | bash -s 2.14.1
+        bin/hub release edit -a "dist/jaime-${GITHUB_REF#refs/tags/}-x86_64-apple-darwin.tar.gz" -m ${GITHUB_REF#refs/tags/} ${GITHUB_REF#refs/tags/}
