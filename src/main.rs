@@ -65,7 +65,7 @@ fn display_selector(input: String, preview: Option<&str>) -> Result<Option<Strin
     Ok(selected_items
         .iter()
         .next()
-        .map(|selected| selected.text().to_string()))
+        .map(|selected| selected.output().to_string()))
 }
 
 fn run_shell(context: &Context, cmd: &str) -> Result<(), Error> {
