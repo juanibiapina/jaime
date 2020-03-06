@@ -6,7 +6,7 @@ extern crate serde_yaml;
 extern crate skim;
 
 use failure::{Error, ResultExt};
-use skim::{Skim, SkimOptionsBuilder};
+use skim::{Skim, SkimOptionsBuilder, SkimItemReader};
 use serde::{Serialize, Deserialize};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -53,14 +53,19 @@ fn display_selector(input: String, preview: Option<&str>) -> Result<Option<Strin
         .build()
         .map_err(|err| format_err!("{}", err))?;
 
-    let selected_items = Skim::run_with(&options, Some(Box::new(Cursor::new(input))))
+    // `SkimItemReader` is a helper to turn any `BufRead` into a stream of `SkimItem`
+    // `SkimItem` was implemented for `AsRef<str>` by default
+    let item_reader = SkimItemReader::default();
+    let items = item_reader.of_bufread(Cursor::new(input));
+
+    let selected_items = Skim::run_with(&options, Some(items))
         .map(|out| out.selected_items)
         .unwrap_or_else(|| Vec::new());
 
     Ok(selected_items
         .iter()
         .next()
-        .map(|selected| selected.get_output_text().to_string()))
+        .map(|selected| selected.text().to_string()))
 }
 
 fn run_shell(context: &Context, cmd: &str) -> Result<(), Error> {
