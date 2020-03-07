@@ -6,7 +6,8 @@ A command line launcher inspired by Alfred.
 
 ## Install
 
-Clone this repository and install locally with:
+Download a release from Github or clone this repository and install locally
+with:
 
 ```
 cargo install --path .
