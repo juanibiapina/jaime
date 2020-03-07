@@ -30,20 +30,23 @@ impl Config {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
+pub enum Argument {
+    FromCommand {
+        command: String,
+        preview: Option<String>,
+    },
+    FreeText,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
 pub enum Widget {
     Command {
         command: String,
+        arguments: Option<Vec<Argument>>,
     },
     Select {
         options: HashMap<String, Widget>,
-    },
-    DynamicSelect {
-        arguments: Vec<String>,
-        preview: Option<String>,
-        command: String,
-    },
-    FreeText {
-        command: String,
     },
 }
 
@@ -90,11 +93,64 @@ fn display_selector(input: String, preview: Option<&str>) -> Result<Option<Strin
         .map(|selected| selected.output().to_string()))
 }
 
+fn readline() -> Result<String, Error> {
+    let mut rl = Editor::<()>::new();
+
+    let line = rl.readline("> ");
+    match line {
+        Ok(line) => { Ok(line) },
+        Err(ReadlineError::Interrupted) => {
+            Err(format_err!("Interrupted"))
+        },
+        Err(ReadlineError::Eof) => {
+            Err(format_err!("EOF"))
+        },
+        Err(err) => {
+            Err(err)?
+        }
+    }
+}
 
 impl Widget {
     pub fn run(&self, context: &Context) -> Result<(), Error> {
         match self {
-            Widget::Command { command } => run_shell(context, command),
+            Widget::Command { command, arguments } => {
+                let mut args: Vec<String> = Vec::new();
+
+                if let Some(arguments) = arguments {
+                    for (index, argument) in arguments.iter().enumerate() {
+                        match argument {
+                            Argument::FreeText => {
+                                args.push(readline()?);
+                            },
+                            Argument::FromCommand{ command, preview } => {
+                                let mut command = command.clone();
+                                for i in 0..index {
+                                    command = command.replace(&format!("{{{}}}", i), &args[i]);
+                                }
+
+                                let output = run_shell_command_for_output(context, &command)?;
+
+                                let selected_command = display_selector(output, preview.as_ref().map(|s| s.as_ref()))?;
+
+                                if let Some(selected_command) = selected_command {
+                                    args.push(selected_command);
+                                } else {
+                                    return Ok(());
+                                }
+                            },
+                        }
+                    }
+                }
+
+                let mut command = command.clone();
+
+                for (index, arg) in args.iter().enumerate() {
+                    command = command.replace(&format!("{{{}}}", index), arg);
+                }
+
+                run_shell(context, &command)
+            },
             Widget::Select { options } => {
                 let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
                 let selected_command = display_selector(input, None)?;
@@ -106,55 +162,6 @@ impl Widget {
                     }
                 } else {
                     Ok(())
-                }
-            },
-            Widget::DynamicSelect { arguments, command, preview } => {
-                let mut args: Vec<String> = Vec::new();
-
-                for (index, argument) in arguments.iter().enumerate() {
-                    let mut result = argument.clone();
-
-                    for i in 0..index {
-                        result = result.replace(&format!("{{{}}}", i), &args[i]);
-                    }
-
-                    let output = run_shell_command_for_output(context, &result)?;
-
-                    let selected_command = display_selector(output, preview.as_ref().map(|s| s.as_ref()))?;
-
-                    if let Some(selected_command) = selected_command {
-                        args.push(selected_command);
-                    } else {
-                        return Ok(());
-                    }
-                }
-
-                let mut cmd = command.clone();
-
-                for (index, arg) in args.iter().enumerate() {
-                    cmd = cmd.replace(&format!("{{{}}}", index), arg);
-                }
-
-                run_shell(context, &cmd)
-            },
-            Widget::FreeText { command } => {
-                let mut rl = Editor::<()>::new();
-
-                let line = rl.readline("> ");
-                match line {
-                    Ok(line) => {
-                        let cmd = command.replace("{}", &line);
-                        run_shell(context, &cmd)
-                    },
-                    Err(ReadlineError::Interrupted) => {
-                        Ok(())
-                    },
-                    Err(ReadlineError::Eof) => {
-                        Ok(())
-                    },
-                    Err(err) => {
-                        Err(err)?
-                    }
                 }
             },
         }
