@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::fs::File;
+use std::process;
 use std::process::Command;
 
 struct Context {
@@ -184,6 +185,9 @@ fn actual_main() -> Result<(), Error> {
 fn main() {
     match actual_main() {
         Ok(()) => {},
-        Err(err) => println!("{}", err),
+        Err(err) => {
+            println!("{}", err);
+            process::exit(1);
+        },
     }
 }
