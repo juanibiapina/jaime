@@ -13,13 +13,13 @@ fn actual_main() -> Result<(), Error> {
     let file = File::open(config_path).context("Couldn't read config file")?;
     let config: Config = serde_yaml::from_reader(file)?;
 
-    let top_level_widget = config.into_widget();
+    let action = config.into_action();
 
     let context = Context {
         cache_directory: xdg_dirs.create_cache_directory("cache")?,
     };
 
-    top_level_widget.run(&context)?;
+    action.run(&context)?;
 
     Ok(())
 }

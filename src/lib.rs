@@ -21,7 +21,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn into_widget(self) -> Action {
+    pub fn into_action(self) -> Action {
         Action::Select {
             options: self.options,
         }
