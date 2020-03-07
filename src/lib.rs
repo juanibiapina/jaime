@@ -17,20 +17,20 @@ pub struct Context {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub widgets: HashMap<String, Widget>,
+    pub options: HashMap<String, Action>,
 }
 
 impl Config {
-    pub fn into_widget(self) -> Widget {
-        Widget::Select {
-            options: self.widgets,
+    pub fn into_widget(self) -> Action {
+        Action::Select {
+            options: self.options,
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
-pub enum Argument {
+pub enum Widget {
     FromCommand {
         command: String,
         preview: Option<String>,
@@ -40,13 +40,13 @@ pub enum Argument {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
-pub enum Widget {
+pub enum Action {
     Command {
         command: String,
-        arguments: Option<Vec<Argument>>,
+        widgets: Option<Vec<Widget>>,
     },
     Select {
-        options: HashMap<String, Widget>,
+        options: HashMap<String, Action>,
     },
 }
 
@@ -111,19 +111,19 @@ fn readline() -> Result<String, Error> {
     }
 }
 
-impl Widget {
+impl Action {
     pub fn run(&self, context: &Context) -> Result<(), Error> {
         match self {
-            Widget::Command { command, arguments } => {
+            Action::Command { command, widgets } => {
                 let mut args: Vec<String> = Vec::new();
 
-                if let Some(arguments) = arguments {
-                    for (index, argument) in arguments.iter().enumerate() {
-                        match argument {
-                            Argument::FreeText => {
+                if let Some(widgets) = widgets {
+                    for (index, widget) in widgets.iter().enumerate() {
+                        match widget {
+                            Widget::FreeText => {
                                 args.push(readline()?);
                             },
-                            Argument::FromCommand{ command, preview } => {
+                            Widget::FromCommand{ command, preview } => {
                                 let mut command = command.clone();
                                 for i in 0..index {
                                     command = command.replace(&format!("{{{}}}", i), &args[i]);
@@ -151,7 +151,7 @@ impl Widget {
 
                 run_shell(context, &command)
             },
-            Widget::Select { options } => {
+            Action::Select { options } => {
                 let input = options.keys().map(|k| k.as_ref()).collect::<Vec<&str>>().join("\n");
                 let selected_command = display_selector(input, None)?;
 
