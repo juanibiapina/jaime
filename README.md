@@ -6,7 +6,8 @@ A command line launcher inspired by Alfred.
 
 ## Install
 
-Clone this repository and install locally with:
+Download a release from Github or clone this repository and install locally
+with:
 
 ```
 cargo install --path .
@@ -18,12 +19,12 @@ Configuration file that I use:
 https://github.com/juanibiapina/dotfiles/blob/master/jaime/config.yml
 
 Jaime looks for a config file in the XDG Config directory (usually
-~/.config/jaime/config.yml). The configuration specifies which widgets will be
-available. For instance, two simple widgets:
+~/.config/jaime/config.yml). The configuration specifies which actions will be
+available. For instance, two simple actions for `screensaver` and `brew`:
 
 ```
 ---
-widgets:
+options:
   screensaver:
     type: Command
     command: open -a ScreenSaverEngine
@@ -31,38 +32,25 @@ widgets:
     type: Select
     options:
       install:
-        type: DynamicSelect
-        arguments:
-          - brew search
-        command: brew install {}
-        preview: brew info {}
+        type: Command
+        widgets:
+          - type: FromCommand
+            command: brew search
+            preview: brew info {}
+        command: brew install {0}
 ```
 
-### Widgets
+### Actions
 
-Widgets can be of several types:
-
-#### Command
-
-Runs a single command using the shell:
-
-```
-widgets:
-  screensaver:
-    type: Command
-    command: open -a ScreenSaverEngine
-```
-
-Attributes:
-
-- `command`: The command to run
+Actions can be of two types:
 
 #### Select
 
-Presents a static list of options. Each option is another widget:
+Presents a static list of options in a fuzzy finder. Each option is another
+action:
 
 ```
-widgets:
+options:
   cmd:
     type: Select
     options:
@@ -76,48 +64,80 @@ widgets:
 
 Attributes:
 
-- `options`: A map of widgets names to widgets
+- `type`: `Select`
+- `options`: A map of action names to actions
 
-#### DynamicSelect
+#### Command
 
-Presents a dynamic list of options. Each entry in the `arguments` list is presented in sequence, then its selection is saved in the register `0`, `1` and so on. An argument can use a placeholder like `{0}` to refer to the result of previous arguments. `command` is the final shell command which will be run.
+Runs a command using the shell:
 
 ```
-widgets:
-  asdf-install:
-    type: DynamicSelect
-    arguments:
-      - asdf plugin-list
-      - asdf list-all {0}
-    command: asdf install {0} {1}
+options:
+  brew-install:
+    type: Command
+    command: brew install {0}
+    widgets:
+      - type: FromCommand
+        command: brew search
+        preview: brew info {}
 ```
 
 Attributes:
 
-- `arguments`: list of commands to generate arguments
-- `command`: final command to execute
+- `type`: `Command`
+- `command`: The command to run
+- `widgets`: A list of widgets
+
+The `command` string can contain placeholder values like `{0}`, `{1}` etc.
+These values are replaced with the result of running the corresponding widget
+in the `widgets` key.
+
+### Widgets
+
+Widgets are used to get input from the user. There are currently two types:
+
+#### FromCommand
+
+Presents a list of options in a fuzzy finder. The list of options comes from
+running an external command:
+
+```
+options:
+  asdf-install:
+    type: Command
+    command: asdf install {0} {1}
+    widgets:
+      - type: FromCommand
+        command: asdf plugin list
+      - type: FromCommand
+        command: asdf list-all {0}
+```
+
+Attributes:
+
+- `type`: `FromCommand`
+- `command`: command to run to get the options
 - `preview` (optional): command to run to generate a preview window
 
-The `preview` command uses the placeholder syntax from
-[skim](https://github.com/lotabout/skim), and does not know which argument
-command is currently being viewed. In practice that means it can only work well
-when the list of argument commands has only one entry.
+In this example the second widget refers to the result of the first widget
+using the placeholder `{0}`.
 
 #### FreeText
 
-Takes text input from the user and passes it as argument to a command. The text
-is not quoted when passed to the command.
+Takes free text input from the user.
 
 ```
-widgets:
+options:
   duck:
-    type: FreeText
-    command: open "https://duckduckgo.com/?q={}"
+    type: Command
+    command: open "https://duckduckgo.com/?q={0}"
+    widgets:
+      - type: FreeText
 ```
 
 Attributes:
 
-- `command`: command to execute
+- `type`: `FreeText`
 
 ## Usage
 
