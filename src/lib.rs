@@ -85,7 +85,7 @@ fn display_selector(input: String, preview: Option<&str>) -> Result<Option<Strin
 
     let selected_items = Skim::run_with(&options, Some(items))
         .map(|out| out.selected_items)
-        .unwrap_or_else(|| Vec::new());
+        .unwrap_or_else(Vec::new);
 
     Ok(selected_items
         .iter()
@@ -125,8 +125,8 @@ impl Action {
                             },
                             Widget::FromCommand{ command, preview } => {
                                 let mut command = command.clone();
-                                for i in 0..index {
-                                    command = command.replace(&format!("{{{}}}", i), &args[i]);
+                                for (i, arg) in args.iter().enumerate().take(index) {
+                                    command = command.replace(&format!("{{{}}}", i), arg);
                                 }
 
                                 let output = run_shell_command_for_output(context, &command)?;
